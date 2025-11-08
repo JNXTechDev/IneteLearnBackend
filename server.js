@@ -30,18 +30,42 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema, 'Users');
 
 // Dictionary Schema (for Dictionary collection)
+// Update your Dictionary Schema to include new fields
 const dictionarySchema = new mongoose.Schema({
-  word: { type: String, required: true },
-  translation: { type: String, required: true },
+  inete: { type: String, required: true },
+  hiligaynon: { type: String, required: true },
+  english: { type: String, required: true },
   pronunciation: String,
   partOfSpeech: String,
-  definition: String,
-  example: String,
+  
+  // New definition fields
+  definitionInete: String,
+  definitionHiligaynon: String,
+  definitionEnglish: String,
+  
+  // New example fields
+  exampleInete: String,
+  exampleHiligaynon: String,
+  exampleEnglish: String,
+  
+  // Contributor info
+  contributorName: String,
+  contributorEmail: String,
+  
+  category: String,
   audioUrl: String,
   createdAt: { type: Date, default: Date.now },
 });
 
+// Text index for search
+dictionarySchema.index({ 
+  inete: 'text', 
+  hiligaynon: 'text', 
+  english: 'text' 
+});
+
 const Dictionary = mongoose.model('Dictionary', dictionarySchema, 'Dictionary');
+
 
 // ============= ROOT ROUTE =============
 app.get('/', (req, res) => {
@@ -189,6 +213,97 @@ app.get('/api/health', (req, res) => {
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });
+
+
+// Add to your server.js
+
+// ============= COMMUNITY CONTRIBUTION ROUTES =============
+
+// Submit word contribution
+app.post('/api/dictionary/contribute', async (req, res) => {
+  try {
+    const { 
+      inete, 
+      hiligaynon, 
+      english, 
+      definitionInete,
+      definitionHiligaynon,
+      definitionEnglish,
+      exampleInete,
+      exampleHiligaynon,
+      exampleEnglish,
+      contributorName,
+      contributorEmail
+    } = req.body;
+
+    // Validation
+    if (!inete || !hiligaynon || !english) {
+      return res.status(400).json({ 
+        message: 'Inete, Hiligaynon, and English words are required' 
+      });
+    }
+
+    // Check if word already exists
+    const existingWord = await Dictionary.findOne({ 
+      inete: inete.toLowerCase() 
+    });
+    
+    if (existingWord) {
+      return res.status(400).json({ 
+        message: 'This Inete word already exists in the dictionary' 
+      });
+    }
+
+    // Create new dictionary entry directly
+    const newWord = new Dictionary({
+      inete: inete.trim(),
+      hiligaynon: hiligaynon.trim(),
+      english: english.trim(),
+      definitionInete: definitionInete?.trim() || '',
+      definitionHiligaynon: definitionHiligaynon?.trim() || '',
+      definitionEnglish: definitionEnglish?.trim() || '',
+      exampleInete: exampleInete?.trim() || '',
+      exampleHiligaynon: exampleHiligaynon?.trim() || '',
+      exampleEnglish: exampleEnglish?.trim() || '',
+      contributorName: contributorName?.trim() || 'Anonymous',
+      contributorEmail: contributorEmail?.trim() || '',
+      createdAt: new Date()
+    });
+
+    await newWord.save();
+
+    console.log('✅ New word contributed:', inete, 'by', contributorName);
+    
+    res.status(201).json({ 
+      message: 'Word added successfully! Thank you for your contribution.',
+      word: newWord
+    });
+
+  } catch (error) {
+    console.error('Contribution error:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+});
+
+// Get recent contributions (for display)
+app.get('/api/dictionary/recent', async (req, res) => {
+  try {
+    const recentWords = await Dictionary.find()
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    res.json(recentWords);
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error fetching recent words', 
+      error: error.message 
+    });
+  }
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
