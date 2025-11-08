@@ -314,6 +314,46 @@ app.get('/api/dictionary/recent', async (req, res) => {
   }
 });
 
+// Add this after your signin route in server.js
+
+// Update user profile
+app.put('/api/auth/update-profile', async (req, res) => {
+  try {
+    const { userId, fullName, token } = req.body;
+
+    // Validation
+    if (!userId || !fullName) {
+      return res.status(400).json({ message: 'User ID and name are required' });
+    }
+
+    // Verify token (basic validation)
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Find and update user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update full name
+    user.fullName = fullName.trim();
+    await user.save();
+
+    console.log('✅ Profile updated for:', user.email);
+    
+    res.json({
+      message: 'Profile updated successfully',
+      fullName: user.fullName,
+      email: user.email,
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
