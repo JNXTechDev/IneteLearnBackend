@@ -10,8 +10,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// MongoDB Connection String (from your MongoDB Atlas)
-const MONGODB_URI = "mongodb+srv://inete_admin:2irW3RmFN864AVxK@cluster0.8i1sn.mongodb.net/IneteDB?retryWrites=true&w=majority&appName=Cluster0";
+// MongoDB Connection String (using environment variable)
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://inete_admin:2irW3RmFN864AVxK@cluster0.8i1sn.mongodb.net/IneteDB?retryWrites=true&w=majority&appName=Cluster0";
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema({
   lastLogin: { type: Date },
 });
 
-const User = mongoose.model('User', userSchema, 'Users'); // 'Users' is your collection name
+const User = mongoose.model('User', userSchema, 'Users');
 
 // Dictionary Schema (for Dictionary collection)
 const dictionarySchema = new mongoose.Schema({
@@ -42,6 +42,20 @@ const dictionarySchema = new mongoose.Schema({
 });
 
 const Dictionary = mongoose.model('Dictionary', dictionarySchema, 'Dictionary');
+
+// ============= ROOT ROUTE =============
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'IneteLearn API is running!',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      signup: '/api/auth/signup',
+      signin: '/api/auth/signin',
+      dictionary: '/api/dictionary',
+    }
+  });
+});
 
 // ============= AUTH ROUTES =============
 
@@ -168,10 +182,16 @@ app.post('/api/dictionary', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'IneteLearn API is running' });
+  res.json({ 
+    status: 'OK', 
+    message: 'IneteLearn API is running',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+  });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 IneteLearn API Server running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
