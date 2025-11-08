@@ -178,20 +178,30 @@ app.get('/api/dictionary', async (req, res) => {
 });
 
 // Search dictionary
+// Search dictionary - UPDATED to search new fields
 app.get('/api/dictionary/search', async (req, res) => {
   try {
     const { query } = req.query;
+    
+    if (!query || query.trim() === '') {
+      return res.json([]);
+    }
+
+    // Search in Inete, Hiligaynon, AND English fields
     const words = await Dictionary.find({
       $or: [
-        { word: { $regex: query, $options: 'i' } },
-        { translation: { $regex: query, $options: 'i' } },
+        { inete: { $regex: query, $options: 'i' } },
+        { hiligaynon: { $regex: query, $options: 'i' } },
+        { english: { $regex: query, $options: 'i' } }
       ]
-    });
+    }).limit(50);
+
     res.json(words);
   } catch (error) {
     res.status(500).json({ message: 'Search error', error: error.message });
   }
 });
+
 
 // Add new word (protected route)
 app.post('/api/dictionary', async (req, res) => {
